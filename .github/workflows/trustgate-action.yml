@@ -1,0 +1,26 @@
+name: trustgate
+# Reusable CI scan: detect symlink-hijack / one-click-RCE / unsafe AI-agent
+# trust settings on every push and PR. Comments findings on the PR and fails
+# the job on the configured severity. Drop this file into any repo and adjust
+# `fail-on` to taste.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write   # needed for the PR comment
+
+jobs:
+  trustgate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: TrustGate scan
+        uses: cognis-digital/trustgate@main
+        with:
+          path: "."
+          fail-on: "high"
+          comment: "true"

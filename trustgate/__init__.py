@@ -11,5 +11,5 @@ try:
     from trustgate.core import TOOL_NAME, TOOL_VERSION
 except Exception:  # pragma: no cover
     TOOL_NAME = "trustgate"
-    TOOL_VERSION = "0.1.0"
+    TOOL_VERSION = "0.2.0"
 __version__ = TOOL_VERSION

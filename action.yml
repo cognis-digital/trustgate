@@ -1,0 +1,88 @@
+name: "TrustGate scan"
+description: "Scan a repo for symlink-hijack / one-click-RCE / unsafe AI-agent trust settings (SymJack / TrustFall). Stdlib Python, no deps."
+author: "Cognis Digital"
+branding:
+  icon: "shield"
+  color: "purple"
+
+inputs:
+  path:
+    description: "Directory to scan."
+    required: false
+    default: "."
+  fail-on:
+    description: "Fail the job if a finding at/above this severity is present (critical|high|medium|low|info)."
+    required: false
+    default: "high"
+  min-severity:
+    description: "Only report findings at/above this severity."
+    required: false
+    default: "info"
+  comment:
+    description: "Comment the findings table on the PR (requires pull_request event + GITHUB_TOKEN)."
+    required: false
+    default: "true"
+  ai:
+    description: "Enable the opt-in Cognis AI layer (needs a reachable COGNIS_AI_* backend; off otherwise)."
+    required: false
+    default: "false"
+
+outputs:
+  score:
+    description: "0-100 trust-hygiene score."
+    value: ${{ steps.scan.outputs.score }}
+  result:
+    description: "PASS or FAIL against fail-on."
+    value: ${{ steps.scan.outputs.result }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Run TrustGate
+      id: scan
+      shell: bash
+      env:
+        TG_AI: ${{ inputs.ai }}
+      run: |
+        set -uo pipefail
+        AI_FLAG=""
+        if [ "${TG_AI}" = "true" ]; then AI_FLAG="--ai"; fi
+        # JSON for outputs + machine consumption
+        python -m trustgate scan "${{ inputs.path }}" \
+          --format json --min-severity "${{ inputs.min-severity }}" \
+          --fail-on "${{ inputs.fail-on }}" $AI_FLAG > tg.json || true
+        # Human table for the PR comment / log
+        python -m trustgate scan "${{ inputs.path }}" \
+          --format table --min-severity "${{ inputs.min-severity }}" \
+          --fail-on "${{ inputs.fail-on }}" $AI_FLAG | tee tg.txt
+        RC=${PIPESTATUS[0]}
+        SCORE=$(python -c "import json;print(json.load(open('tg.json')).get('score',0))")
+        echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+        if [ "$RC" -eq 0 ]; then echo "result=PASS" >> "$GITHUB_OUTPUT"; else echo "result=FAIL" >> "$GITHUB_OUTPUT"; fi
+        echo "rc=$RC" >> "$GITHUB_OUTPUT"
+
+    - name: Comment findings on PR
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -uo pipefail
+        { echo "### TrustGate scan — score ${{ steps.scan.outputs.score }}/100 (${{ steps.scan.outputs.result }})"; \
+          echo ""; echo '```'; cat tg.txt; echo '```'; } > body.md
+        PR=${{ github.event.pull_request.number }}
+        gh api -X POST "repos/${{ github.repository }}/issues/$PR/comments" \
+          -f body="$(cat body.md)" || echo "comment failed (token perms?) — continuing"
+
+    - name: Enforce fail-on
+      shell: bash
+      run: |
+        if [ "${{ steps.scan.outputs.rc }}" != "0" ]; then
+          echo "TrustGate found findings at/above --fail-on=${{ inputs.fail-on }}"
+          exit 1
+        fi

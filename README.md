@@ -17,10 +17,12 @@ Standard-library Python only. No network access. No third-party dependencies.
 
 | Domain    | Examples |
 |-----------|----------|
-| **symlink** | Symlinks whose target resolves **outside** the repo (hijack), absolute targets, links to sensitive host paths (`/etc`, `.ssh`, `.env`, `id_rsa`, `system32`), dangling links. |
-| **trust**   | Agent configs (`.cursor/`, `.vscode/`, `.claude/`, `mcp.json`, devcontainer) with `autoApprove` / `alwaysAllow` / `dangerouslySkipPermissions` / `yolo` / `trustedWithoutPrompt`; MCP commands that launch shells or `curl … \| bash`. |
+| **symlink** | Symlinks whose target resolves **outside** the repo (hijack), absolute targets, links to sensitive host paths (`/etc`, `.ssh`, `.aws`, `.kube`, `.npmrc`, `.git-credentials`, `id_rsa`, `system32`), dangling links. |
+| **trust**   | Agent configs — now JSON **and** JSONC / TOML / YAML — across `.cursor/`, `.vscode/`, `.claude/`, `.continue/`, `.cline/`, `.windsurf/`, `.aider/`, `mcp.json`, devcontainer — with `autoApprove` / `alwaysAllow` / `dangerouslySkipPermissions` / `yolo` / `autoConfirm` / `bypassPermissions` / `trustedWithoutPrompt`; **wildcard tool/permission grants** (`"*"`); **inline hard-coded secrets**; MCP commands that launch shells or `curl … \| bash`. |
 | **perms**   | World-writable / group-writable config files; configs living in world-writable system locations (Windows `C:\Temp`, `C:\Users\Public`). |
-| **autorun** | VS Code tasks with `runOn: folderOpen` (zero-click), devcontainer lifecycle commands, repo-shipped git hooks, custom `core.hooksPath`, agent lifecycle hooks. |
+| **autorun** | VS Code tasks with `runOn: folderOpen` (zero-click), devcontainer lifecycle commands, repo-shipped git hooks, custom `core.hooksPath`, agent lifecycle hooks — **plus AST-level source→sink analysis** of the Python/shell/JS scripts those hooks invoke (`os.system`, `subprocess(..., shell=True)`, `eval`/`exec`, `curl\|bash`, …). |
+
+Every finding is mapped to a **CWE** id and a **Microsoft AI-agent / supply-chain trust taxonomy** class (e.g. `MS.AGENT.HumanInTheLoopBypass`, `MS.SC.SymlinkFollowing`), surfaced in `rules`, `--format json`, SARIF, and the HTML report.
 
 ## Install
 
@@ -45,8 +47,69 @@ python -m trustgate scan /path/to/project --format sarif
 # Only show high+ findings, and gate CI on critical only
 python -m trustgate scan /path/to/project --min-severity high --fail-on critical
 
-# List the detection rules
+# Self-contained HTML report
+python -m trustgate scan /path/to/project --format html --out trustgate.html
+
+# shields.io status-badge endpoint JSON
+python -m trustgate badge /path/to/project
+
+# List the detection rules (with CWE + MS taxonomy)
 python -m trustgate rules
+```
+
+## Pluggable AI mode (opt-in, off by default)
+
+TrustGate is **byte-for-byte deterministic by default**. With `--ai` (or the
+`COGNIS_AI_*` env), it additionally runs the Cognis shared AI backend over the
+same config/script sources, merges the model's findings (`source="ai"`, novel
+candidates flagged), and dedupes them against the rule findings. Nothing leaves
+the box — the backend points at a **local** OpenAI-compatible endpoint:
+
+```bash
+# Point at a local fleet endpoint, then opt in with --ai
+export COGNIS_AI_BACKEND=uncensored-fleet   # or COGNIS_AI_ENDPOINT=http://127.0.0.1:8774/v1
+python -m trustgate scan /path/to/project --ai
+```
+
+If `--ai` is given but the backend is unreachable, TrustGate prints a clear
+note and **continues with rule findings only** (it never crashes, and the scan
+without `--ai` is unchanged).
+
+## GitHub Action (viral CI)
+
+TrustGate ships a reusable composite Action. Drop this into any repo's
+`.github/workflows/`:
+
+```yaml
+name: trustgate
+on: [push, pull_request]
+permissions:
+  contents: read
+  pull-requests: write   # for the PR comment
+jobs:
+  trustgate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cognis-digital/trustgate@main
+        with:
+          path: "."
+          fail-on: "high"
+          comment: "true"
+```
+
+It scans the repo, **comments the findings table on the PR** (via `gh api`),
+and **fails the job** on `--fail-on` severity. Outputs `score` and `result`.
+
+## Status badge
+
+`trustgate badge <path>` (or `scan --format badge`) prints a
+[shields.io endpoint](https://shields.io/endpoint) object
+(`{schemaVersion,label,message,color}`). Publish it as `trustgate-badge.json`
+and embed:
+
+```markdown
+![trustgate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/OWNER/REPO/main/trustgate-badge.json)
 ```
 
 ### Exit codes
