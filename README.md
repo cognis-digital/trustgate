@@ -13,6 +13,39 @@ a project for them before your agent ever touches it.
 
 Standard-library Python only. No network access. No third-party dependencies.
 
+## Usage — step by step
+
+`trustgate` scans a project / agent-workspace directory for symlink-hijack,
+one-click-RCE, and unsafe-trust settings in AI coding-agent projects.
+
+1. **Install** (editable from a clone, or from the wheel):
+   ```bash
+   pip install -e .
+   # provides the `trustgate` console script
+   ```
+2. **Scan a project directory** (the `scan` subcommand takes a path):
+   ```bash
+   trustgate scan ./my-agent-project
+   ```
+3. **List the detection rules / domains**, or produce a status badge:
+   ```bash
+   trustgate rules
+   trustgate badge ./my-agent-project    # shields.io endpoint JSON
+   ```
+4. **Read / use the output.** Default `--format table` prints findings, taxonomy
+   (CWE / MS), locations, and a 0–100 score; switch to `json`, `sarif`, `html`,
+   or `badge`, and `--out FILE` to write a report. `--min-severity` filters the
+   list; the opt-in `--ai` flag (env `COGNIS_AI_*`) adds novel findings and
+   degrades to rules-only if the backend is down:
+   ```bash
+   trustgate scan ./my-agent-project --format html --out trustgate.html
+   ```
+5. **Gate CI** with `--fail-on` (`critical|high|medium|low|info`, default `high`);
+   the process exits non-zero when a finding at/above that severity is present:
+   ```bash
+   trustgate scan ./my-agent-project --format sarif --fail-on high --out trustgate.sarif
+   ```
+
 ## What it detects
 
 | Domain    | Examples |
