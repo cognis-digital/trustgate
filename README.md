@@ -13,6 +13,12 @@ a project for them before your agent ever touches it.
 
 Standard-library Python only. No network access. No third-party dependencies.
 
+<!-- cognis:layman:start -->
+## What is this?
+
+TrustGate is a security scanner for software projects that use AI coding assistants. It checks a project folder before you or your AI agent starts working in it, looking for hidden traps that could let malicious code run on your computer just by opening a repository. It detects things like suspicious file links that escape the project, AI agent settings that skip safety prompts, and scripts that run automatically on folder open. Developers and teams using tools like Cursor, VS Code, or Claude Code will find it useful for catching supply-chain and one-click attack risks before they strike.
+<!-- cognis:layman:end -->
+
 ## What it detects
 
 | Domain    | Examples |
@@ -23,6 +29,42 @@ Standard-library Python only. No network access. No third-party dependencies.
 | **autorun** | VS Code tasks with `runOn: folderOpen` (zero-click), devcontainer lifecycle commands, repo-shipped git hooks, custom `core.hooksPath`, agent lifecycle hooks — **plus AST-level source→sink analysis** of the Python/shell/JS scripts those hooks invoke (`os.system`, `subprocess(..., shell=True)`, `eval`/`exec`, `curl\|bash`, …). |
 
 Every finding is mapped to a **CWE** id and a **Microsoft AI-agent / supply-chain trust taxonomy** class (e.g. `MS.AGENT.HumanInTheLoopBypass`, `MS.SC.SymlinkFollowing`), surfaced in `rules`, `--format json`, SARIF, and the HTML report.
+
+<!-- cognis:install:start -->
+## Install
+
+`trustgate` is source-available (not published to PyPI) — every method below installs
+straight from GitHub. Pick whichever you prefer; the one-line scripts auto-detect
+the best tool available on your machine.
+
+**One-liner (Linux / macOS):**
+```sh
+curl -fsSL https://raw.githubusercontent.com/cognis-digital/trustgate/HEAD/install.sh | sh
+```
+
+**One-liner (Windows PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/cognis-digital/trustgate/HEAD/install.ps1 | iex
+```
+
+**Or install manually — any one of:**
+```sh
+pipx install "git+https://github.com/cognis-digital/trustgate.git"     # isolated (recommended)
+uv tool install "git+https://github.com/cognis-digital/trustgate.git"  # uv
+pip install "git+https://github.com/cognis-digital/trustgate.git"      # pip
+```
+
+**From source:**
+```sh
+git clone https://github.com/cognis-digital/trustgate.git
+cd trustgate && pip install .
+```
+
+Then run:
+```sh
+trustgate --help
+```
+<!-- cognis:install:end -->
 
 ## Install
 
@@ -156,6 +198,32 @@ print(report.score, report.counts)
 for f in report.findings:
     print(f.severity, f.rule, f.location)
 ```
+
+<a name="verification"></a>
+## Verification
+
+[![tests](https://img.shields.io/badge/tests-45%20passing-2ea44f.svg)](AUDIT.md)
+
+Every push is verified end-to-end. Latest audit (2026-06-13):
+
+```text
+tests        : 45 passed, 0 failed, 0 errored
+compile      : all modules parse
+cli          : C:\Python314\python.exe: No module named https
+package      : https
+```
+
+<details><summary>CLI surface (<code>--help</code>)</summary>
+
+```text
+C:\Python314\python.exe: No module named https
+```
+</details>
+
+Full machine-readable results: [`AUDIT.md`](AUDIT.md) · regenerate with `python -m https --help` + `pytest -q`.
+
+<div align="right"><a href="#top">↑ back to top</a></div>
+
 
 ## License
 

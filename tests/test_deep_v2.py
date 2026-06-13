@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from trustgate.core import (
     scan_repo, to_badge, to_html, to_sarif, taxonomy_for,
-    Finding, merge_ai_findings, ai_finding_to_finding, RULE_TAXONOMY,
+    Finding, merge_ai_findings, ai_finding_to_finding,
 )
 
 REPO_ROOT = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

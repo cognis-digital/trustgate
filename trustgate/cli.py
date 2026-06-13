@@ -13,7 +13,6 @@ from .core import (
     Report,
     ScanError,
     SEVERITY_ORDER,
-    RULE_TAXONOMY,
     scan_repo,
     to_sarif,
     to_badge,
