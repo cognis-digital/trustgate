@@ -30,6 +30,16 @@ TrustGate is a security scanner for software projects that use AI coding assista
 
 Every finding is mapped to a **CWE** id and a **Microsoft AI-agent / supply-chain trust taxonomy** class (e.g. `MS.AGENT.HumanInTheLoopBypass`, `MS.SC.SymlinkFollowing`), surfaced in `rules`, `--format json`, SARIF, and the HTML report.
 
+<!-- cognis:domains:start -->
+## Domains
+
+**Primary domain:** AI & ML  ·  **JTF MERIDIAN division:** ATHENA-PRIME · SAGE
+
+**Topics:** `cognis` `ai` `llm` `machine-learning` `agent-security` `cli`
+
+Part of the **Cognis Neural Suite** — 300+ source-available tools organized across 12 domains under the JTF MERIDIAN command structure. See the [suite on GitHub](https://github.com/cognis-digital) and [jtf-meridian](https://github.com/cognis-digital/jtf-meridian) for how the pieces fit together.
+<!-- cognis:domains:end -->
+
 <!-- cognis:install:start -->
 ## Install
 
