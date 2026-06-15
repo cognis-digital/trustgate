@@ -25,10 +25,10 @@ def _mk(base, rel, content):
 def _can_symlink(tmp):
     try:
         t = Path(tmp) / "_t"
-        l = Path(tmp) / "_l"
+        lnk = Path(tmp) / "_l"
         t.mkdir()
-        os.symlink(t, l, target_is_directory=True)
-        os.remove(l)
+        os.symlink(t, lnk, target_is_directory=True)
+        os.remove(lnk)
         t.rmdir()
         return True
     except (OSError, NotImplementedError):

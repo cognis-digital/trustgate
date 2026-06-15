@@ -120,8 +120,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _emit(text: str, out_path: Optional[str]) -> None:
     if out_path:
-        with open(out_path, "w", encoding="utf-8") as fh:
-            fh.write(text if text.endswith("\n") else text + "\n")
+        try:
+            with open(out_path, "w", encoding="utf-8") as fh:
+                fh.write(text if text.endswith("\n") else text + "\n")
+        except OSError as exc:
+            print(f"error: cannot write output file '{out_path}': {exc}",
+                  file=sys.stderr)
+            raise
         print(f"wrote {out_path}", file=sys.stderr)
     else:
         print(text)
@@ -139,22 +144,25 @@ def _run_scan(args: argparse.Namespace) -> int:
         print(f"note: --ai requested but backend is '{report.ai_status}'; "
               f"continuing with rule findings only.", file=sys.stderr)
 
-    threshold = SEVERITY_ORDER[args.min_severity]
+    threshold = SEVERITY_ORDER.get(args.min_severity, SEVERITY_ORDER["info"])
     report.findings = [
         f for f in report.findings
         if SEVERITY_ORDER.get(f.severity, 99) <= threshold
     ]
 
-    if args.format == "json":
-        _emit(json.dumps(report.to_dict(), indent=2), args.out)
-    elif args.format == "sarif":
-        _emit(json.dumps(to_sarif(report), indent=2), args.out)
-    elif args.format == "badge":
-        _emit(json.dumps(to_badge(report), indent=2), args.out)
-    elif args.format == "html":
-        _emit(to_html(report, args.fail_on), args.out)
-    else:
-        _emit(_render_table(report, args.fail_on), args.out)
+    try:
+        if args.format == "json":
+            _emit(json.dumps(report.to_dict(), indent=2), args.out)
+        elif args.format == "sarif":
+            _emit(json.dumps(to_sarif(report), indent=2), args.out)
+        elif args.format == "badge":
+            _emit(json.dumps(to_badge(report), indent=2), args.out)
+        elif args.format == "html":
+            _emit(to_html(report, args.fail_on), args.out)
+        else:
+            _emit(_render_table(report, args.fail_on), args.out)
+    except OSError:
+        return 2
 
     return 1 if report.failed(args.fail_on) else 0
 
@@ -166,7 +174,10 @@ def _run_badge(args: argparse.Namespace) -> int:
     except (OSError, ScanError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    print(json.dumps(to_badge(report), indent=2))
+    try:
+        _emit(json.dumps(to_badge(report), indent=2), getattr(args, "out", None))
+    except OSError:
+        return 2
     return 0
 
 

@@ -239,8 +239,14 @@ def _iter_entries(root: Path) -> Iterable[Path]:
     """Yield every file & symlink under root, skipping noise dirs.
 
     Does NOT follow symlinked directories (avoids loops / escaping the walk).
+    OSErrors during the walk (e.g. permission-denied subdirectory) are silently
+    skipped so a single inaccessible directory does not abort the whole scan.
     """
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    try:
+        walk_iter = os.walk(root, followlinks=False, onerror=lambda _e: None)
+    except OSError:
+        return
+    for dirpath, dirnames, filenames in walk_iter:
         # prune skip dirs in place
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         base = Path(dirpath)
@@ -712,7 +718,11 @@ def _check_git_hooks(root: Path, out: List[Finding]) -> None:
     """Repo-supplied git hooks (or core.hooksPath) auto-run on git ops."""
     for cand in (root / ".githooks", root / "githooks"):
         if cand.is_dir():
-            for h in cand.iterdir():
+            try:
+                hook_entries = list(cand.iterdir())
+            except OSError:
+                hook_entries = []
+            for h in hook_entries:
                 if h.is_file():
                     out.append(Finding(
                         "autorun.repo_git_hook", "high",
@@ -960,13 +970,13 @@ def ai_finding_to_finding(item: Dict[str, Any], location: str) -> Finding:
 def merge_ai_findings(rule_findings: List[Finding],
                       ai_findings: List[Finding]) -> List[Finding]:
     """Append AI findings, deduping any that collide with a rule finding."""
-    seen = {f.dedupe_key() for f in rule_findings}
     merged = list(rule_findings)
+    # Build the dedup set once (O(n)) rather than inside the loop (O(n²)).
+    rule_locs = {(rf.location.split("::", 1)[0],
+                  (rf.evidence or "")[:60].lower()) for rf in rule_findings}
     for f in ai_findings:
         # dedupe by (location-file, evidence) since ai.rule differs from rules
         key = (f.location.split("::", 1)[0], (f.evidence or "")[:60].lower())
-        rule_locs = {(rf.location.split("::", 1)[0],
-                      (rf.evidence or "")[:60].lower()) for rf in rule_findings}
         if key in rule_locs:
             continue
         merged.append(f)

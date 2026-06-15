@@ -108,9 +108,15 @@ def _handle(msg: Dict[str, Any]) -> None:
         _error(req_id, -32601, f"method not found: {method}")
 
 
+_MAX_LINE_BYTES = 4 * 1024 * 1024  # 4 MB — sane upper bound for a JSON-RPC message
+
+
 def run_stdio_server() -> int:
     """Read newline-delimited JSON-RPC requests from stdin; reply on stdout."""
     for line in sys.stdin:
+        if len(line) > _MAX_LINE_BYTES:
+            # Skip pathologically large lines to avoid memory exhaustion.
+            continue
         line = line.strip()
         if not line:
             continue
