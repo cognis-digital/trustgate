@@ -21,6 +21,6 @@ jobs:
       - name: TrustGate scan
         uses: cognis-digital/trustgate@main
         with:
-          path: "."
+          path: "trustgate"
           fail-on: "high"
           comment: "true"
