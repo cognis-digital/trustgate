@@ -1,0 +1,16 @@
+$ trustgate-emit --help
+
+usage: trustgate [-h] [--version] {scan,rules,badge} ...
+
+Detect symlink-hijack / one-click-RCE / unsafe-trust settings in AI coding-
+agent projects.
+
+positional arguments:
+  {scan,rules,badge}
+    scan              Scan a project / agent-workspace directory for risks.
+    rules             List the detection rules / domains.
+    badge             Print a shields.io endpoint JSON for a status badge.
+
+options:
+  -h, --help          show this help message and exit
+  --version           show program's version number and exit

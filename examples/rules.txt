@@ -1,0 +1,59 @@
+$ trustgate-emit rules
+
+trustgate detection rules:
+
+[symlink]
+  symlink.escapes_repo             (critical)
+      Symlink target resolves outside the repository root.
+      CWE-59 · MS.SC.SymlinkFollowing
+  symlink.sensitive_target         (critical)
+      Symlink points at a sensitive host location (/etc, .ssh, .env, ...).
+      CWE-61 · MS.SC.SymlinkFollowing
+  symlink.absolute_target          (high)
+      Symlink uses an absolute target path.
+      CWE-59 · MS.SC.SymlinkFollowing
+  symlink.dangling                 (low)
+      Dangling symlink whose target does not exist.
+      CWE-59 · MS.SC.SymlinkFollowing
+
+[trust]
+  trust.auto_approve               (critical)
+      Agent config enables auto-approve / auto-run / trusted-without-prompt.
+      CWE-862 · MS.AGENT.HumanInTheLoopBypass
+  trust.curl_pipe_shell            (critical)
+      Config runs curl|sh style remote-fetch-piped-to-shell.
+      CWE-494 · MS.SC.UntrustedCodeExecution
+  trust.mcp_shell_command          (medium)
+      MCP/agent config launches an interpreter or chained shell command.
+      CWE-78 · MS.AGENT.ToolPoisoning
+  trust.wildcard_tool_grant        (high)
+      Agent config grants ALL tools/permissions via a wildcard.
+      CWE-732 · MS.AGENT.ExcessiveAgency
+  trust.env_secret_inline          (high)
+      Agent config contains an inline hard-coded credential.
+      CWE-798 · MS.SC.SecretExposure
+
+[autorun]
+  autorun.task_on_open             (critical)
+      VS Code task runs automatically on folder open.
+      CWE-829 · MS.SC.AutomaticCodeExecution
+  autorun.devcontainer_hook        (medium)
+      devcontainer lifecycle command auto-executes on create/open.
+      CWE-829 · MS.SC.AutomaticCodeExecution
+  autorun.repo_git_hook            (high)
+      Repository ships an executable git hook.
+      CWE-829 · MS.SC.AutomaticCodeExecution
+  autorun.custom_hookspath         (high)
+      git core.hooksPath redirects hooks to a repo-controlled directory.
+      CWE-426 · MS.SC.AutomaticCodeExecution
+  autorun.agent_hooks              (medium)
+      Config defines agent lifecycle hooks.
+      CWE-829 · MS.AGENT.ToolPoisoning
+  autorun.dangerous_hook_script    (high)
+      Auto-run hook/task script reaches a dangerous exec/shell sink (AST).
+      CWE-94 · MS.SC.UntrustedCodeExecution
+
+[perms]
+  perms.world_writable             (critical/high)
+      File (config) is world-writable and can be replaced by any local user.
+  
